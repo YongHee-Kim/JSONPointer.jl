@@ -5,6 +5,9 @@
 
 Implementation of JSON Pointers according to [RFC 6901](https://tools.ietf.org/html/rfc6901/)
 
+## Acknowledgement
+As it is stated in the [license](./LICENSE), this package is developed with resources from [Devsisters Corp.](https://github.com/Devsisters)
+
 ## Overview
 [JSONPointer](https://tools.ietf.org/html/rfc6901/) is a Unicode string containing a sequence of zero or more reference tokens, each prefixed by a '/' (%x2F) character.
 
