@@ -157,6 +157,8 @@ for T in (Dict, OrderedCollections.OrderedDict)
         Base.get(dict::$T, p::Pointer, default) = _get(dict, p, default)
     end
 end
+Base.setindex!(dict::Dict{K, V}, v, p::Pointer) where {K, V} = _setindex!(dict, v, p)
+
 
 Base.getindex(A::AbstractArray, p::Pointer) = _getindex(A, p)
 Base.haskey(A::AbstractArray, p::Pointer) = _haskey(A, p)
