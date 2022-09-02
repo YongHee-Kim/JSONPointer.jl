@@ -31,7 +31,7 @@ function _last_element_to_type!(jk)
     elseif x[2] == "number"
         return Union{Int, Float64}
     elseif x[2] == "object"
-        return OrderedCollections.OrderedDict{String, Any}
+        return OrderedDict{String, Any}
     elseif x[2] == "array"
         return Vector{Any}
     elseif x[2] == "boolean"
@@ -130,34 +130,9 @@ end
 function Base.show(io::IO, ::Pointer{Nothing})
     print(io, "JSONPointer{Nothing}(\"\")")
 end
-
-# This code block needs some explaining.
-#
-# Ideally, one would define methods like Base.haskey(::AbstractDict, ::Pointer).
-# However, this causes an ambiguity with Base.haskey(::Dict, key), which has a
-# more concrete first argument and a less concrete second argument. We could
-# just define both methods to avoid the ambiguity with Dict, but this would
-# probably break any package which defines an <:AbstractDict and fails to type
-# the second argument to haskey, getindex, etc!
-#
-# To avoid the ambiguity issue, we have to manually encode each AbstractDict
-# subtype that we support :(
-for T in (Dict, OrderedCollections.OrderedDict)
-    @eval begin
-        # This method is used when creating new dictionaries from JSON pointers.
-        function $T{K, V}(kv::Pair{<:Pointer, V}...) where {V, K<:Pointer}
-            return $T{String, Any}()
-        end
-
-        _new_container(::$T) = $T{String, Any}()
-
-        Base.haskey(dict::$T, p::Pointer) = _haskey(dict, p)
-        Base.getindex(dict::$T, p::Pointer) = _getindex(dict, p)
-        Base.setindex!(dict::$T, v, p::Pointer) = _setindex!(dict, v, p)
-        Base.get(dict::$T, p::Pointer, default) = _get(dict, p, default)
-    end
+function Base.getindex(A::T, p::Pointer) where T<:AbstractDict
+    error("test")
 end
-
 Base.getindex(A::AbstractArray, p::Pointer) = _getindex(A, p)
 Base.haskey(A::AbstractArray, p::Pointer) = _haskey(A, p)
 
@@ -241,13 +216,21 @@ function _get(collection, p::Pointer, default)
     end
     return default
 end
+function _get!(collection, p::Pointer, default)
+    if _haskey(collection, p)
+        return _getindex(collection, p)
+    else 
+        _setindex!(collection, default, p)
+    end
+    return default
+end
 
 # ==============================================================================
 
 _null_value(p::Pointer) = _null_value(eltype(p))
 _null_value(::Type{String}) = ""
 _null_value(::Type{<:Real}) = 0
-_null_value(::Type{<:AbstractDict}) = OrderedCollections.OrderedDict{String, Any}()
+_null_value(::Type{<:AbstractDict}) = OrderedDict{String, Any}()
 _null_value(::Type{<:AbstractVector{T}}) where {T} = T[]
 _null_value(::Type{Bool}) = false
 _null_value(::Type{Nothing}) = nothing
@@ -292,8 +275,11 @@ function _add_element_if_needed(collection, token)
 end
 
 _new_data(::Any, n::Int) = Vector{Any}(missing, n)
-_new_data(::AbstractVector, ::String) = OrderedCollections.OrderedDict{String, Any}()
-_new_data(x::AbstractDict, ::String) = _new_container(x)
+_new_data(::AbstractVector, ::String) = OrderedDict{String, Any}()
+function _new_data(x::T, ::String) where T <: AbstractDict
+    OrderedDict{String, Any}()
+end
+
 
 function _setindex!(collection::AbstractDict, v, p::Pointer)
     prev = collection
