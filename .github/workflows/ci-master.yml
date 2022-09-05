@@ -1,9 +1,10 @@
-name: Run CI on master
+name: Run CI
 
 on:
   push:
     branches:
       - master
+      - devlop
   pull_request:
 
 jobs:
