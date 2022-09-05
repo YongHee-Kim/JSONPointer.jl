@@ -244,10 +244,10 @@ function _convert_v(v::V, p::Pointer{U}) where {U, V}
     try
         return convert(eltype(p), v)
     catch
-        error(
+        throw(ErrorException(
             "$(v)::$(typeof(v)) is not valid type for $(p). Remove type " *
             "assertion in the JSON pointer if you don't a need static type."
-        )
+        ))
     end
 end
 
