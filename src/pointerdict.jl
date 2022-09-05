@@ -107,7 +107,6 @@ end
 
 Base.reverse(pd::PointerDict) = PointerDict(reverse(getfield(pd, :d)))
 
-
 Base.iterate(pd::PointerDict) = iterate(getfield(pd, :d))
 Base.iterate(pd::PointerDict, i) = iterate(getfield(pd, :d), i)
 
@@ -147,7 +146,7 @@ function Base.mergewith(combine, pd::PointerDict, pds::PointerDict...)
 end
 
 # fall back to String if we don't clearly have Symbol
-_promote_keytypes(@nospecialize(pds::Tuple{Vararg{PointerDict{Symbol}}})) = Symbol
+_promote_keytypes(@nospecialize(pds::Tuple{Vararg{PointerDict{Symbol, T}}})) where T = Symbol
 _promote_keytypes(@nospecialize(pds::Tuple{Vararg{PointerDict}})) = String
 _promote_valtypes(V) = V
 function _promote_valtypes(V, d, ds...)  # give up if promoted to any
