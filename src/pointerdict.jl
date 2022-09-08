@@ -133,16 +133,18 @@ function Base.merge(pd::PointerDict, pds::PointerDict...)
     merge!(out, pds...)
 end
 
-@compat Base.mergewith(combine, pd::PointerDict) = copy(pd)
-@compat function Base.mergewith(combine, pd::PointerDict, pds::PointerDict...)
-    K = _promote_keytypes((pd, pds...))
-    V0 = _promote_valtypes(valtype(pd), pds...)
-    V = promote_type(Core.Compiler.return_type(combine, Tuple{V0,V0}), V0)
-    out = PointerDict(Dict{K,V}())
-    for (k,v) in pd
-        out[k] = v
+@static if VERSION >= v"1.5"
+    Base.mergewith(combine, pd::PointerDict) = copy(pd)
+    function Base.mergewith(combine, pd::PointerDict, pds::PointerDict...)
+        K = _promote_keytypes((pd, pds...))
+        V0 = _promote_valtypes(valtype(pd), pds...)
+        V = promote_type(Core.Compiler.return_type(combine, Tuple{V0,V0}), V0)
+        out = PointerDict(Dict{K,V}())
+        for (k,v) in pd
+            out[k] = v
+        end
+        mergewith!(combine, out, pds...)
     end
-    mergewith!(combine, out, pds...)
 end
 
 # fall back to String if we don't clearly have Symbol
