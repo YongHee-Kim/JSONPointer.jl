@@ -133,8 +133,8 @@ function Base.merge(pd::PointerDict, pds::PointerDict...)
     merge!(out, pds...)
 end
 
-Base.mergewith(combine, pd::PointerDict) = copy(pd)
-function Base.mergewith(combine, pd::PointerDict, pds::PointerDict...)
+@compat Base.mergewith(combine, pd::PointerDict) = copy(pd)
+@compat function Base.mergewith(combine, pd::PointerDict, pds::PointerDict...)
     K = _promote_keytypes((pd, pds...))
     V0 = _promote_valtypes(valtype(pd), pds...)
     V = promote_type(Core.Compiler.return_type(combine, Tuple{V0,V0}), V0)
