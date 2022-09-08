@@ -1,6 +1,5 @@
 module JSONPointer
 
-using Compat
 using OrderedCollections
 
 include("pointer.jl")
