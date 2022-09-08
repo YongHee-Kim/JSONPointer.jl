@@ -3,7 +3,7 @@ using JSONPointer
 using OrderedCollections
 
 @testset "Basic Tests" begin
-    doc = Dict(
+    doc = PointerDict(
         "foo" => ["bar", "baz"],
         "" => 0,
         "a/b" => 1,
@@ -49,7 +49,7 @@ using OrderedCollections
 end
 
 @testset "URI Fragment Tests" begin
-    doc = Dict(
+    doc = PointerDict(
         "foo" => ["bar", "baz"],
         ""=> 0,
         "a/b"=> 1,
@@ -105,7 +105,7 @@ end
     p1 = j"/a/1/b"
     p2 = j"/cd/2/ef"
 
-    data = Dict(p1 =>1, p2 => 2)
+    data = PointerDict(p1 =>1, p2 => 2)
     @test data[p1] == 1
     @test data[p2] == 2
     @test haskey(data, p1)
@@ -116,17 +116,17 @@ end
     p1 = j"/ab/1"
     p2 = j"/cd/2/ef"
 
-    data = OrderedDict(p1 => "This", p2 => "Is my Data")
+    data = PointerDict(p1 => "This", p2 => "Is my Data")
     @test data[p1] == "This"
     @test data[p2] == "Is my Data"
 end
 
 @testset "access deep nested object" begin
-    data = [Dict("a" => 10)]
+    data = [PointerDict("a" => 10)]
     @test data[j"/1/a"] == 10
 
     p1 = j"/a/b/c/d/e/f/g/1/2/a/b/c"
-    data = Dict(p1 => "sooo deep")
+    data = PointerDict(p1 => "sooo deep")
     @test data[p1] == "sooo deep"
     @test get(data, p1, missing) == "sooo deep"
 
@@ -154,7 +154,7 @@ end
     @test data[j"/1/4"] == ["me"]
     @test data[j"/1/4/1"] == "me"
 
-    # need to add get for Array?
+    # get isn't defined for array
     @test_broken get(data, j"/1", missing) |> ismissing
 end
 
@@ -163,7 +163,7 @@ end
     p2 = j"/\559"
     p3 = j"/\900/10"
 
-    d = Dict(p1 => 1, p2 => 2, p3 => 3)
+    d = PointerDict(p1 => 1, p2 => 2, p3 => 3)
     @test d[p1] == 1
     @test d["5"] == 1
     @test d[p2] == 2
@@ -182,12 +182,12 @@ end
 end
 
 @testset "Failed setindex!" begin
-    d = Dict("a" => [1])
+    d = PointerDict("a" => [1])
     @test_throws ErrorException d[j"/a/b"] = 1
 end
 
 @testset "grow object and array" begin
-    d = Dict(j"/a" => Dict())
+    d = PointerDict(j"/a" => Dict())
     d[j"/a/b"] = []
     d[j"/a/b/2"] = 1
     d[j"/a/b/5"] = 2
@@ -206,14 +206,14 @@ end
     p5 = j"/a/5::boolean"
     p6 = j"/a/6::null"
 
-    data = Dict(p1 =>"string", p2 => 1, p3 => Dict(), p4 => [], p5 => true, p6 => missing)
+    data = PointerDict(p1 =>"string", p2 => 1, p3 => Dict(), p4 => [], p5 => true, p6 => missing)
     @test data[p1] == "string"
     @test data[p2] == 1
     
     @test_throws ErrorException data[p1] = 1
     @test_throws ErrorException data[p2] = "string"
     
-    d = Dict(p1 =>missing, p2 => missing, p3 => missing, p4 => missing, p5 => missing)
+    d = PointerDict(p1 =>missing, p2 => missing, p3 => missing, p4 => missing, p5 => missing)
     @test d[p1] == ""
     @test d[p2] == 0
     @test isa(d[p3], OrderedDict)
