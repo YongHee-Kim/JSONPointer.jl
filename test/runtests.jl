@@ -121,7 +121,7 @@ end
     @test data[p2] == "Is my Data"
 end
 
-@testset "access deep nested object" begin
+@testset "test for 'getindex', 'get', 'get!'" begin
     data = [PointerDict("a" => 10)]
     @test data[j"/1/a"] == 10
 
@@ -156,6 +156,24 @@ end
 
     # get isn't defined for array
     @test_broken get(data, j"/1", missing) |> ismissing
+
+    data = PointerDict()
+    @test "this" == get!(data, j"/a", "this")
+    @test data[j"/a"] == data["a"] == "this"
+
+    @test [1,2,3] == get!(data, j"/b", Any[1,2,3])
+    @test data[j"/b"] == data["b"] == [1,2,3]
+    @test data[j"/b/1"] == data["b"][1] == 1
+    @test data[j"/b/2"] == data["b"][2] == 2
+
+    @test get!(data, j"/b/5", missing) |> ismissing
+    @test data[j"/b/5"] === data["b"][5]
+
+    @test "that" == get(data, "c", "that")
+    @test haskey(data, "c") == false
+    @test "that" == get!(data, "c", "that")
+    @test haskey(data, "c")
+    data["e"] = [1]
 end
 
 @testset "literal string for a Number" begin
@@ -231,6 +249,56 @@ end
     @test_throws ArgumentError JSONPointer.Pointer("/a/0")
     @test isa(JSONPointer.Pointer("/0"; shift_index = true), JSONPointer.Pointer)
 
+end
+
+@testset "PointerDicts" begin
+    d = Dict("foo"=>1, "bar"=>2)
+    _keys = collect(keys(d))
+    pd = PointerDict(d)
+
+    @test length(pd) == length(d)
+
+    @test empty!(PointerDict(Dict("foo"=>1, :bar=>2))) isa PointerDict
+    @test empty(pd) == PointerDict(empty(d))
+
+    @test haskey(pd, "foo")
+    @test getkey(pd, "buz", nothing) === nothing
+
+    @testset "convert" begin
+        expected = OrderedDict
+        result = convert(expected, pd)
+
+        @test result isa expected
+    end
+
+    @testset "iterate" begin
+        @test iterate(pd) == iterate(d)
+        @test iterate(pd, 1) == iterate(d, 1)
+        @test iterate(pd, 2) == iterate(d, 2)
+    end
+
+    @testset "iteratorsize" begin
+        @test Base.IteratorSize(pd) == Base.IteratorSize(d)
+    end
+
+    @testset "iteratoreltype" begin
+        @test Base.IteratorEltype(pd) == Base.IteratorEltype(d)
+    end
+
+    push!(pd, "buz" => 10)
+    @test pop!(pd, "buz") == 10
+    @test pop!(pd, "buz", 20) == 20
+    @test sizehint!(pd, 5) === pd
+    @test get(pd, delete!(pd, "foo"), 10) == 10
+
+    @testset "merge & mergewith" begin
+        a = PointerDict(j"/dict/a"=>1, j"/array/1"=>2, "c"=>3)
+        b = PointerDict(j"/dict/b"=>4, j"/array/1"=>5)
+        c = PointerDict(j"/dict/dict"=>Dict("aa"=>100), "d"=>nothing)
+
+        @test @inferred(merge(a, b)) == PointerDict(j"/dict/a" => 1, "c"=>3, j"/dict/b" => 4, j"/array"=>Any[2, 5])
+        @test @inferred(merge(a, b, c)) == PointerDict(j"/dict/a" => 1, "c"=>3, j"/dict/b" => 4, j"/array"=>Any[2, 5], j"/dict/dict" => Dict("aa" => 100), "d" => nothing)
+    end
 end
 
 @testset "Miscellaneous" begin 

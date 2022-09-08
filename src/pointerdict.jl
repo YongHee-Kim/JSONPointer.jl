@@ -17,7 +17,7 @@ struct PointerDict{K<:Union{String,Symbol}, V} <: AbstractDict{K, V}
     PointerDict(d::AbstractDict{Symbol,V}) where {V} = new{Symbol,V}(d)
 
     function PointerDict(d::T) where T <: AbstractDict
-        dict = T{String,valtype(d)}()
+        dict = dicttype(T){String,valtype(d)}()
         for (k,v) in d
             dict[string(k)] = v
         end
@@ -34,8 +34,11 @@ struct PointerDict{K<:Union{String,Symbol}, V} <: AbstractDict{K, V}
         end
         PointerDict(d)
     end
-    PointerDict(; kwargs...) = PointerDict(values(kwargs))
+    # PointerDict(; kwargs...) = PointerDict(values(kwargs))
 end
+
+dicttype(::Type{T}) where T <: AbstractDict = eval(T.name.wrapper)
+dicttype(x::T) where T <: AbstractDict = eval(T.name.wrapper)
 
 Base.IteratorSize(@nospecialize T::Type{<:PointerDict}) = Base.IteratorSize(fieldtype(T, :d))
 Base.IteratorEltype(@nospecialize T::Type{<:PointerDict}) = Base.IteratorEltype(eltype(T))
@@ -105,8 +108,6 @@ function Base.setindex!(pd::PointerDict, v, jp::Pointer)
     _setindex!(getfield(pd, :d), v, jp)
 end
 
-Base.reverse(pd::PointerDict) = PointerDict(reverse(getfield(pd, :d)))
-
 Base.iterate(pd::PointerDict) = iterate(getfield(pd, :d))
 Base.iterate(pd::PointerDict, i) = iterate(getfield(pd, :d), i)
 
@@ -130,22 +131,12 @@ function Base.merge(pd::PointerDict, pds::PointerDict...)
     for (k,v) in pd
         out[k] = v
     end
-    merge!(out, pds...)
+    merge!(recursive_merge, out, pds...)
 end
 
-@static if VERSION >= v"1.5"
-    Base.mergewith(combine, pd::PointerDict) = copy(pd)
-    function Base.mergewith(combine, pd::PointerDict, pds::PointerDict...)
-        K = _promote_keytypes((pd, pds...))
-        V0 = _promote_valtypes(valtype(pd), pds...)
-        V = promote_type(Core.Compiler.return_type(combine, Tuple{V0,V0}), V0)
-        out = PointerDict(Dict{K,V}())
-        for (k,v) in pd
-            out[k] = v
-        end
-        mergewith!(combine, out, pds...)
-    end
-end
+recursive_merge(x::AbstractDict...) = merge(recursive_merge, x...)
+recursive_merge(x::AbstractVector...) = cat(x...; dims=1)
+recursive_merge(x...) = x[end]
 
 # fall back to String if we don't clearly have Symbol
 _promote_keytypes(@nospecialize(pds::Tuple{Vararg{PointerDict{Symbol, T}}})) where T = Symbol
