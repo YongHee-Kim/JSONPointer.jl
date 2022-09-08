@@ -130,9 +130,7 @@ end
 function Base.show(io::IO, ::Pointer{Nothing})
     print(io, "JSONPointer{Nothing}(\"\")")
 end
-function Base.getindex(A::T, p::Pointer) where T<:AbstractDict
-    error("test")
-end
+
 Base.getindex(A::AbstractArray, p::Pointer) = _getindex(A, p)
 Base.haskey(A::AbstractArray, p::Pointer) = _haskey(A, p)
 
