@@ -1,7 +1,7 @@
 # JSONPointer
 ![LICENSE MIT](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)
-![Run CI on master](https://github.com/devsisters/JSONPointer.jl/workflows/Run%20CI%20on%20master/badge.svg)
-[![Converage](https://devsisters.github.io/JSONPointer.jl/coverage/badge_linecoverage.svg)](https://devsisters.github.io/JSONPointer.jl/coverage/index)
+[![Run CI](https://github.com/YongHee-Kim/JSONPointer.jl/actions/workflows/ci-master.yml/badge.svg)](https://github.com/YongHee-Kim/JSONPointer.jl/actions/workflows/ci-master.yml)
+[![Converage](https://github.com/YongHee-Kim/JSONPointer.jl/blob/gh-pages/docs/coverage/badge_linecoverage.svg)](https://yonghee-kim.github.io/JSONPointer.jl/coverage/index)
 
 Implementation of JSON Pointers according to [RFC 6901](https://www.rfc-editor.org/rfc/rfc6901)
 
