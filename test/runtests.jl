@@ -81,7 +81,7 @@ end
     @test_throws ArgumentError JSONPointer.Pointer("some/thing")
     doc = [0, 1, 2]
     @test_throws(
-        ErrorException(
+        ArgumentError(
             "JSON pointer does not match the data-structure. I tried (and " *
             "failed) to index $(doc) with the key: a"
         ),
@@ -201,7 +201,7 @@ end
 
 @testset "Failed setindex!" begin
     d = PointerDict("a" => [1])
-    @test_throws ErrorException d[j"/a/b"] = 1
+    @test_throws ArgumentError d[j"/a/b"] = 1
 end
 
 @testset "grow object and array" begin
@@ -228,8 +228,8 @@ end
     @test data[p1] == "string"
     @test data[p2] == 1
     
-    @test_throws ErrorException data[p1] = 1
-    @test_throws ErrorException data[p2] = "string"
+    @test_throws ArgumentError data[p1] = 1
+    @test_throws ArgumentError data[p2] = "string"
     
     d = PointerDict(p1 =>missing, p2 => missing, p3 => missing, p4 => missing, p5 => missing)
     @test d[p1] == ""
@@ -241,12 +241,12 @@ end
 
 @testset "Exceptions" begin
     # error on undefined datatype
-    @test_throws ErrorException JSONPointer.Pointer("/a::nothing")
-    @test_throws ErrorException JSONPointer.Pointer("/a/1::Int")
+    @test_throws DomainError JSONPointer.Pointer("/a::nothing")
+    @test_throws DomainError JSONPointer.Pointer("/a/1::Int")
 
     # error for 0 based indexing 
-    @test_throws ArgumentError JSONPointer.Pointer("/0")
-    @test_throws ArgumentError JSONPointer.Pointer("/a/0")
+    @test_throws BoundsError JSONPointer.Pointer("/0")
+    @test_throws BoundsError JSONPointer.Pointer("/a/0")
     @test isa(JSONPointer.Pointer("/0"; shift_index = true), JSONPointer.Pointer)
 
 end
@@ -310,4 +310,28 @@ end
     arr = [1,2,3]
     haskey(arr, j"/1")
     !haskey(arr, j"/4")
+end
+
+@testset "append!, deleteat!, pop! for JSONPointer " begin 
+    p1 = j"/Root/header"
+    p2 = j"/Root/Array/1"
+    p3 = j"/Root/Array/2/id"
+    p4 = j"/Root/Array/3/comments/1"
+
+    # appendc! tests 
+    @test append!(p1, "id") == j"/Root/header/id"
+    @test deleteat!(p1, 1) == j"/header/id"
+    @test pop!(p1) == j"/header"
+
+    @test append!(p2, "somelongvalues") == j"/Root/Array/1/somelongvalues"
+    @test deleteat!(p2, 2) == j"/Root/1/somelongvalues"
+    @test pop!(p2) == j"/Root/1"
+
+    @test append!(p3, 1) == j"/Root/Array/2/id/1"
+    @test deleteat!(p3, 3) == j"/Root/Array/id/1"
+    @test pop!(p3) == j"/Root/Array/id"
+
+    @test append!(p4, 2) == j"/Root/Array/3/comments/1/2"
+    deleteat!(p4, 5) == j"/Root/Array/3/comments/2"
+    @test pop!(p4) == j"/Root/Array/3/comments"
 end
