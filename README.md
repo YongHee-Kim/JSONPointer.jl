@@ -88,5 +88,9 @@ If you need to use a string number as key for dict, put '\' in front of a number
 p1 = j"/\10"
 data = PointerDict(p1 => "this won't be a array")
 
+<<<<<<< develop
 data[p1]
+=======
+    data[p1]
+>>>>>>> master
 ```
