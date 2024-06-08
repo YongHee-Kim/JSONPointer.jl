@@ -39,11 +39,12 @@ function _last_element_to_type!(jk)
     elseif x[2] == "null"
         return Missing
     else
-        error(
-            "You specified a type that JSON doesn't recognize! Instead of " *
-            "`::$(x[2])`, you must use one of `::string`, `::number`, " *
+        # what is most fitting error type for this?
+
+    throw(DomainError(
+            "`::$(x[2])`cannot be used in JSON. use one of `::string`, `::number`, " *
             "`::object`, `::array`, `::boolean`, or `::null`."
-        )
+        ))
     end
 end
 
@@ -108,7 +109,7 @@ function Pointer(token_string::AbstractString; shift_index::Bool = false)
                 tokens[i] += 1
             end
             if iszero(tokens[i])
-                throw(ArgumentError("Julia uses 1-based indexing, use '1' instead of '0'"))
+                throw(BoundsError("Julia uses 1-based indexing, use '1' instead of '0'"))
             end
         elseif occursin(r"^\\\d+$", token) # literal string for a number
             tokens[i] = String(chop(token; head = 1, tail = 0))
@@ -120,6 +121,7 @@ function Pointer(token_string::AbstractString; shift_index::Bool = false)
 end
 
 Base.length(x::Pointer) = length(x.tokens)
+Base.eachindex(x::Pointer) = eachindex(x.tokens)
 
 Base.eltype(::Pointer{T}) where {T} = T
 
@@ -163,10 +165,10 @@ _checked_get(collection::AbstractArray, token::Int) = collection[token]
 _checked_get(collection::AbstractDict, token::String) = collection[token]
 
 function _checked_get(collection, token)
-    error(
+    throw(ArgumentError(
         "JSON pointer does not match the data-structure. I tried (and " *
         "failed) to index $(collection) with the key: $(token)"
-    )
+    ))
 end
 
 # ==============================================================================
@@ -242,7 +244,7 @@ function _convert_v(v::V, p::Pointer{U}) where {U, V}
     try
         return convert(eltype(p), v)
     catch
-        throw(ErrorException(
+        throw(ArgumentError(
             "$(v)::$(typeof(v)) is not valid type for $(p). Remove type " *
             "assertion in the JSON pointer if you don't a need static type."
         ))
@@ -266,10 +268,10 @@ function _add_element_if_needed(
 end
 
 function _add_element_if_needed(collection, token)
-    error(
+    throw(ArgumentError(
         "JSON pointer does not match the data-structure. I tried (and " *
         "failed) to set $(collection) at the index: $(token)"
-    )
+    ))
 end
 
 _new_data(::Any, n::Int) = Vector{Any}(missing, n)
@@ -294,3 +296,16 @@ function _setindex!(collection::AbstractDict, v, p::Pointer)
     return v
 end
 
+# pointer manipulation functions
+function Base.append!(p::Pointer, token::Union{String, Int})
+    push!(p.tokens, token)
+    return p
+end
+function Base.deleteat!(p::Pointer, index::Int)
+    deleteat!(p.tokens, index)
+    return p
+end
+function Base.pop!(p::Pointer)
+    pop!(p.tokens)
+    return p
+end
