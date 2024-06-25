@@ -442,4 +442,16 @@ end
     @test eltype(p2) == Missing 
     @test ismissing(JSONPointer._null_value(p2))
 
+
+    pointer_doc = PointerDict(Dict(:a => 1))
+    @test isa(pointer_doc, PointerDict)
+    @test isa(PointerDict(pointer_doc), PointerDict)
+
+    @test JSONPointer.dicttype(pointer_doc) == PointerDict
+
+    doc = Dict("a" => 1)
+    set_pointer!(doc, "b", 2)
+    @test get_pointer(doc, "a", 0) == 1 
+    @test get_pointer(doc, "b", 0) == 2 
+    @test ismissing(get_pointer(doc, "c", missing))
 end
