@@ -286,7 +286,6 @@ function _new_data(x::T, ::String) where T <: AbstractDict
     OrderedDict{String, Any}()
 end
 
-
 function _setindex!(collection::AbstractDict, v, p::Pointer)
     prev = collection
     for (i, token) in enumerate(p.tokens)
