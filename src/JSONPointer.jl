@@ -1,6 +1,6 @@
 module JSONPointer
 
-using OrderedCollections
+using OrderedCollections, TypedDelegation
 
 include("pointer.jl")
 include("pointerdict.jl")

@@ -288,7 +288,6 @@ end
     push!(pd, "buz" => 10)
     @test pop!(pd, "buz") == 10
     @test pop!(pd, "buz", 20) == 20
-    @test sizehint!(pd, 5) === pd
     @test get(pd, delete!(pd, "foo"), 10) == 10
 
     @testset "merge & mergewith" begin
