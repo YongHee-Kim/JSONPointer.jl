@@ -5,8 +5,16 @@
 
 Implementation of JSON Pointers according to [RFC 6901](https://www.rfc-editor.org/rfc/rfc6901)
 
-## Overview
+# Overview
 [JSONPointer](https://tools.ietf.org/html/rfc6901/) is a Unicode string containing a sequence of zero or more reference tokens, each prefixed by a '/' (%x2F) character.
+
+## Key Features
+- JSONPointer Syntax Support: The package supports the creation and manipulation of JSON Pointers, allowing users to navigate and access elements within JSON data structures.
+
+**Exported Functions and Types:**
+- `@j_str`: allowing string literal `j"/foo"` to construct a JSONPointer 
+- `PointerDict`: A type that extends AbstractDict to support JSON Pointers.
+- `has_pointer`, `get_pointer`, `set_pointer!`: Functions to check if a pointer exists, retrieve a value by pointer, and set a value by pointer, respectively.
 
 # Tutorial 
 
