@@ -162,7 +162,7 @@ Base.:(==)(a::Pointer{U}, b::Pointer{U}) where {U} = a.tokens == b.tokens
 
 _checked_get(collection::AbstractArray, token::Int) = collection[token]
 
-_checked_get(collection::AbstractDict, token::String) = collection[token]
+_checked_get(collection::AbstractDict, token::String) = get_pointer(collection, token)
 
 function _checked_get(collection, token)
     throw(ArgumentError(
@@ -242,6 +242,12 @@ _convert_v(v::U, ::Pointer{U}) where {U} = v
 function _convert_v(v::V, p::Pointer{U}) where {U, V}
     v = ismissing(v) ? _null_value(p) : v
     try
+        #Conversion to OrderedDict is deprecated for unordered associative containers. Need to be sorted before the conversion
+        if eltype(p) <: OrderedDict
+            if <:(V, OrderedDict) == false
+                return convert(eltype(p), sort!(OrderedDict(v)))
+            end
+        end
         return convert(eltype(p), v)
     catch
         throw(ArgumentError(
@@ -280,12 +286,11 @@ function _new_data(x::T, ::String) where T <: AbstractDict
     OrderedDict{String, Any}()
 end
 
-
 function _setindex!(collection::AbstractDict, v, p::Pointer)
     prev = collection
     for (i, token) in enumerate(p.tokens)
         _add_element_if_needed(prev, token)
-        if i != length(p)
+        if i < length(p)
             if ismissing(prev[token])
                 prev[token] = _new_data(prev, p.tokens[i + 1])
             end

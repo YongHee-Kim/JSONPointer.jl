@@ -8,40 +8,81 @@ Implementation of JSON Pointers according to [RFC 6901](https://www.rfc-editor.o
 ## Overview
 [JSONPointer](https://tools.ietf.org/html/rfc6901/) is a Unicode string containing a sequence of zero or more reference tokens, each prefixed by a '/' (%x2F) character.
 
-## Examples
+# Tutorial 
 
-### Constructing Dictionary
+## Installation  
+JSONPointer is a registered package, you can simply install it by using the Julia package manager in two ways:
+
+with the `Pkg` module
+```julia 
+using Pkg
+Pkg.add("JSONPointer")
+```
+or the package manager REPL, simply press the ']' key.
+```julia
+pkg> add JSONPointer
+```
+
+## Creating JSONPointer 
+To create a JSONPointer, you can use the litteral string `j` or more verbose `JSONPointer.Pointer` type
 
 ```julia
 using JSONPointer
 
-p1 = j"/a/1/b"
-p2 = j"/a/2/b"
-data = PointerDict(p1 =>1, p2 => 2)
-# PointerDict{String,Any} with 1 entry:
-#  "a" => Any[OrderedDict{String,Any}("b"=>1), OrderedDict{String,Any}("b"=>2)]
-
+p1 = j"/foo/bar"
+p2 = j"/bar/1"
+# or 
+p1 = JSONPointer.Pointer("/foo/bar")
+p2 = JSONPointer.Pointer("/bar/1")
 ```
+In this example, p1 and p2 are JSONPointers that reference paths within a JSON structure.
 
-### Accessing nested data
+## Using JSONPointer with `AbstractDict`
+To integrate JSONPointer with AbstractDict types in Julia, you have two effective approaches:
 
+1. Leveraging JSONPointer Functions: Utilize the newly defined functions specifically for JSONPointer, such as `set_pointer!`, `get_pointer`, and `has_pointer`, to interact with your AbstractDict objects.
+
+2. Employing `PointerDict`: Enclose `AbstractDict` instances within PointerDict, which seamlessly integrates with the base interface, enabling operations such as `doc[key]`, `doc[key] = value`, and `haskey(doc, key)`.
+
+### Setting values 
 ```julia
-using JSONPointer
+p1 = j"/foo/bar"
+p2 = j"/bar/1"
 
-arr = [[10, 20, 30, ["me"]]]
-arr[j"/1"] == [10, 20, 30, ["me"]]
-arr[j"/1/2"] == 20
-arr[j"/1/4"] == ["me"]
-arr[j"/1/4/1"] == "me"
+doc = Dict{String, Any}()
+set_pointer!(doc, p1, 1)
+set_pointer!(doc, p2, 2)
 
-dict = PointerDict("a" => Dict("b" => Dict("c" => [100, Dict("d" => 200)])))
-dict[j"/a"]
-dict[j"/a/b"]
-dict[j"/a/b/c/1"]
-dict[j"/a/b/c/2/d"]
+# with PointerDict
+pointer_doc = PointerDict(p1 => 1, p2 =>2)
 ```
 
-## Advanced
+### Getting Values
+Continuing from the previous example 
+```julia 
+pointer_doc[j"/foo"] == get_pointer(doc, j"/foo")
+pointer_doc[j"/bar"][1] == get_pointer(doc, j"/bar/1")
+```
+
+### haskey check 
+One other essential features is checking if `key` is valid within `Abstractdict`
+```julia 
+doc = Dict("a" => Dict("b" => Dict("c" => [100, Dict("d" => 200)])))
+has_pointer(doc, j"/a")
+has_pointer(doc, j"/a/b")
+has_pointer(doc, j"/a/b/c/1")
+has_pointer(doc, j"/a/b/c/2")
+has_pointer(doc, j"/a/b/c/2/d")
+
+pointer_doc = PointerDict(doc)
+haskey(pointer_doc, j"/a")
+haskey(pointer_doc, j"/a/b")
+haskey(pointer_doc, j"/a/b/c/1")
+haskey(pointer_doc, j"/a/b/c/2")
+haskey(pointer_doc, j"/a/b/c/2/d")
+```
+
+## Advanced Usage
 
 ## Array-index 
 - Note that Julia is using 1-based index, 0-based index can be used if argument `shift_index = true` is given to a `JSONPointer.Pointer` constructer
@@ -82,15 +123,8 @@ pop!(p1) == j"/header"
 Note that these mutates the pointer
 
 ### String number as a key
-
 If you need to use a string number as key for dict, put '\' in front of a number
 ```julia
 p1 = j"/\10"
 data = PointerDict(p1 => "this won't be a array")
-
-<<<<<<< develop
-data[p1]
-=======
-    data[p1]
->>>>>>> master
 ```

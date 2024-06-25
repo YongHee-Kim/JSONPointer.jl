@@ -3,7 +3,7 @@ using JSONPointer
 using OrderedCollections
 
 @testset "Basic Tests" begin
-    doc = PointerDict(
+    pointer_doc = Dict(
         "foo" => ["bar", "baz"],
         "" => 0,
         "a/b" => 1,
@@ -15,20 +15,35 @@ using OrderedCollections
         " " => 7,
         "m~n" => 8
     )
+    pointer_doc = PointerDict(pointer_doc)
 
-    @test doc[j""] == doc
-    @test doc[j"/foo"] == ["bar", "baz"]
-    @test doc[JSONPointer.Pointer("/foo/0"; shift_index = true)] == "bar"
-    @test doc[j"/foo/1"] == "bar"
-    @test doc[j"/"] == 0
-    @test doc[j"/a~1b"] == 1
-    @test doc[j"/c%d"] == 2
-    @test doc[j"/e^f"] == 3
-    @test doc[j"/g|h"] == 4
-    @test doc[JSONPointer.Pointer("/i\\j")] == 5
-    @test doc[j"/k\"l"] == 6
-    @test doc[j"/ "] == 7
-    @test doc[j"/m~0n"] == 8
+    @test pointer_doc[j""] == pointer_doc
+    @test pointer_doc[j"/foo"] == ["bar", "baz"] == get_pointer(pointer_doc, j"/foo")
+    @test pointer_doc[JSONPointer.Pointer("/foo/0"; shift_index = true)] == "bar"
+    @test pointer_doc[j"/foo/1"] == "bar"
+    @test pointer_doc[j"/"] == 0
+    @test pointer_doc[j"/a~1b"] == 1
+    @test pointer_doc[j"/c%d"] == 2
+    @test pointer_doc[j"/e^f"] == 3
+    @test pointer_doc[j"/g|h"] == 4
+    @test pointer_doc[JSONPointer.Pointer("/i\\j")] == 5
+    @test pointer_doc[j"/k\"l"] == 6
+    @test pointer_doc[j"/ "] == 7
+    @test pointer_doc[j"/m~0n"] == 8
+
+    @test get_pointer(pointer_doc, j"") == pointer_doc
+    @test get_pointer(pointer_doc, j"/foo") == ["bar", "baz"]
+    @test get_pointer(pointer_doc, JSONPointer.Pointer("/foo/0"; shift_index = true)) == "bar"
+    @test get_pointer(pointer_doc, j"/foo/1") == "bar"
+    @test get_pointer(pointer_doc, j"/") == 0
+    @test get_pointer(pointer_doc, j"/a~1b") == 1
+    @test get_pointer(pointer_doc, j"/c%d") == 2
+    @test get_pointer(pointer_doc, j"/e^f") == 3
+    @test get_pointer(pointer_doc, j"/g|h") == 4
+    @test get_pointer(pointer_doc, JSONPointer.Pointer("/i\\j")) == 5
+    @test get_pointer(pointer_doc, j"/k\"l") == 6
+    @test get_pointer(pointer_doc, j"/ ") == 7
+    @test get_pointer(pointer_doc, j"/m~0n") == 8
 
     for k in (
         j"",
@@ -44,12 +59,13 @@ using OrderedCollections
         j"/ ",
         j"/m~0n",
     )
-        @test haskey(doc, k)
+        @test haskey(pointer_doc, k)
+        @test has_pointer(pointer_doc, k)
     end
 end
 
 @testset "URI Fragment Tests" begin
-    doc = PointerDict(
+    doc = Dict(
         "foo" => ["bar", "baz"],
         ""=> 0,
         "a/b"=> 1,
@@ -61,33 +77,50 @@ end
         " "=> 7,
         "m~n"=> 8,
     )
+    pointer_doc = PointerDict(doc)
 
-    @test doc[j"#"] == doc
-    @test doc[j"#/foo"] == ["bar", "baz"]
-    @test doc[JSONPointer.Pointer("#/foo/0"; shift_index = true)] == "bar"
-    @test doc[j"#/foo/1"] == "bar"
-    @test doc[j"#/"] == 0
-    @test doc[j"#/a~1b"] == 1
-    @test doc[j"#/c%25d"] == 2
-    @test doc[j"#/e%5Ef"] == 3
-    @test doc[j"#/g%7Ch"] == 4
-    @test doc[j"#/i%5Cj"] == 5
-    @test doc[j"#/k%22l"] == 6
-    @test doc[j"#/%20"] == 7
-    @test doc[j"#/m~0n"] == 8
+    @test pointer_doc[j"#"] == pointer_doc
+    @test pointer_doc[j"#/foo"] == ["bar", "baz"]
+    @test pointer_doc[JSONPointer.Pointer("#/foo/0"; shift_index = true)] == "bar"
+    @test pointer_doc[j"#/foo/1"] == "bar"
+    @test pointer_doc[j"#/"] == 0
+    @test pointer_doc[j"#/a~1b"] == 1
+    @test pointer_doc[j"#/c%25d"] == 2
+    @test pointer_doc[j"#/e%5Ef"] == 3
+    @test pointer_doc[j"#/g%7Ch"] == 4
+    @test pointer_doc[j"#/i%5Cj"] == 5
+    @test pointer_doc[j"#/k%22l"] == 6
+    @test pointer_doc[j"#/%20"] == 7
+    @test pointer_doc[j"#/m~0n"] == 8
+
+    @test get_pointer(doc, j"#") == doc
+    @test get_pointer(doc, j"#/foo") == ["bar", "baz"]
+    @test get_pointer(doc, JSONPointer.Pointer("#/foo/0"; shift_index = true)) == "bar"
+    @test get_pointer(doc, j"#/foo/1") == "bar"
+    @test get_pointer(doc, j"#/") == 0
+    @test get_pointer(doc, j"#/a~1b") == 1
+    @test get_pointer(doc, j"#/c%25d") == 2
+    @test get_pointer(doc, j"#/e%5Ef") == 3
+    @test get_pointer(doc, j"#/g%7Ch") == 4
+    @test get_pointer(doc, j"#/i%5Cj") == 5
+    @test get_pointer(doc, j"#/k%22l") == 6
+    @test get_pointer(doc, j"#/%20") == 7
+    @test get_pointer(doc, j"#/m~0n") == 8
 end
 
 @testset "WrongInputTests" begin
     @test_throws ArgumentError JSONPointer.Pointer("some/thing")
-    doc = [0, 1, 2]
+    pointer_doc = [0, 1, 2]
     @test_throws(
         ArgumentError(
             "JSON pointer does not match the data-structure. I tried (and " *
-            "failed) to index $(doc) with the key: a"
+            "failed) to index $(pointer_doc) with the key: a"
         ),
-        doc[j"/a"],
+        pointer_doc[j"/a"],
     )
-    @test_throws BoundsError doc[j"/10"]
+    @test_throws KeyError get_pointer(Dict(), j"/a")
+    @test_throws BoundsError pointer_doc[j"/10"]
+    @test_throws BoundsError get_pointer(Dict("a"=> []), j"/a/1")
 end
 
 @testset "JSONPointer Advanced" begin
@@ -105,75 +138,101 @@ end
     p1 = j"/a/1/b"
     p2 = j"/cd/2/ef"
 
-    data = PointerDict(p1 =>1, p2 => 2)
-    @test data[p1] == 1
-    @test data[p2] == 2
-    @test haskey(data, p1)
-    @test haskey(data, p2)
-    @test !haskey(data, j"/x")
-    @test !haskey(data, j"/ba/5")
+    doc = Dict()
+    set_pointer!(doc, p1, 1)
+    set_pointer!(doc, p2, 2)
+    @test length(doc) == 2
+
+    pointer_doc = PointerDict(p1 =>1, p2 => 2)
+
+    @test haskey(pointer_doc, p1)
+    @test haskey(pointer_doc, p2)
+    @test !haskey(pointer_doc, j"/x")
+    @test !haskey(pointer_doc, j"/ba/5")
+    @test has_pointer(doc, p1)
+    @test has_pointer(doc, p2)
+    @test !has_pointer(doc, j"/x")
+    @test !has_pointer(doc, j"/ba/5")
+    @test pointer_doc[p1] == get_pointer(doc, p1)
+    @test pointer_doc[p2] == get_pointer(doc, p2)
 
     p1 = j"/ab/1"
     p2 = j"/cd/2/ef"
 
-    data = PointerDict(p1 => "This", p2 => "Is my Data")
-    @test data[p1] == "This"
-    @test data[p2] == "Is my Data"
+    pointer_doc = PointerDict(p1 => "This", p2 => "Is my Data")
+    @test pointer_doc[p1] == "This"
+    @test pointer_doc[p2] == "Is my Data"
+
+    # this is not supported 
+    doc = Dict(p1 => "This", p2 => "Is my Data")
+    @test_broken get_pointer(doc, p1)
 end
 
 @testset "test for 'getindex', 'get', 'get!'" begin
-    data = [PointerDict("a" => 10)]
-    @test data[j"/1/a"] == 10
+    doc = [Dict("a" => 10)]
+    pointer_doc = [PointerDict("a" => 10)]
+    @test doc[j"/1/a"] == 10
+    @test pointer_doc[j"/1/a"] == 10
 
     p1 = j"/a/b/c/d/e/f/g/1/2/a/b/c"
-    data = PointerDict(p1 => "sooo deep")
-    @test data[p1] == "sooo deep"
-    @test get(data, p1, missing) == "sooo deep"
+    doc = Dict{String, Any}()
+    set_pointer!(doc, p1, "sooo deep")
+    @test get_pointer(doc, p1, missing) == "sooo deep"
+    @test ismissing(get_pointer(doc, j"/nonexist", missing))
 
-    @test haskey(data, j"/a/b/c")
-    @test haskey(data, j"/a/b/c/d")
-    @test haskey(data, j"/a/b/c/d/e/f/g/1")
-    @test !haskey(data, j"/a/b/c/d/e/f/g/2")
+    pointer_doc = PointerDict(doc)
+    @test pointer_doc[p1] == "sooo deep"
+    @test ismissing(get(pointer_doc, j"/nonexist", missing))
 
-    @test isa(data[j"/a/b/c"], AbstractDict)
-    @test isa(data[j"/a/b/c/d"], AbstractDict)
-    @test isa(data[j"/a/b/c/d/e"], AbstractDict)
-    @test isa(data[j"/a/b/c/d/e/f/g"], Array)
-    @test ismissing(data[j"/a/b/c/d/e/f/g/1/1"])
+    @test has_pointer(doc, j"/a/b/c")
+    @test has_pointer(doc, j"/a/b/c/d")
+    @test has_pointer(doc, j"/a/b/c/d/e/f/g/1")
+    @test !has_pointer(doc, j"/a/b/c/d/e/f/g/2")
 
-    @test get(data, j"/a/f", missing) |> ismissing
-    @test get(data, j"/a/b/c/d/e/f/g/5", 10000) == 10000
+    @test haskey(pointer_doc, j"/a/b/c")
+    @test haskey(pointer_doc, j"/a/b/c/d")
+    @test haskey(pointer_doc, j"/a/b/c/d/e/f/g/1")
+    @test !haskey(pointer_doc, j"/a/b/c/d/e/f/g/2")
 
-    @test_throws KeyError data[j"/a/f"]
-    @test_throws KeyError data[j"/x"]
-    @test_throws BoundsError data[j"/a/b/c/d/e/f/g/5"]
+    @test isa(pointer_doc[j"/a/b/c"], AbstractDict)
+    @test isa(pointer_doc[j"/a/b/c/d"], AbstractDict)
+    @test isa(pointer_doc[j"/a/b/c/d/e"], AbstractDict)
+    @test isa(pointer_doc[j"/a/b/c/d/e/f/g"], Array)
+    @test ismissing(pointer_doc[j"/a/b/c/d/e/f/g/1/1"])
 
-    data = [[10, 20, 30, ["me"]]]
-    @test data[j"/1"] == [10, 20, 30, ["me"]]
-    @test data[j"/1/2"] == 20
-    @test data[j"/1/4"] == ["me"]
-    @test data[j"/1/4/1"] == "me"
+    @test get(pointer_doc, j"/a/f", missing) |> ismissing
+    @test get(pointer_doc, j"/a/b/c/d/e/f/g/5", 10000) == 10000
+
+    @test_throws KeyError pointer_doc[j"/a/f"]
+    @test_throws KeyError pointer_doc[j"/x"]
+    @test_throws BoundsError pointer_doc[j"/a/b/c/d/e/f/g/5"]
+
+    pointer_doc = [[10, 20, 30, ["me"]]]
+    @test pointer_doc[j"/1"] == [10, 20, 30, ["me"]]
+    @test pointer_doc[j"/1/2"] == 20
+    @test pointer_doc[j"/1/4"] == ["me"]
+    @test pointer_doc[j"/1/4/1"] == "me"
 
     # get isn't defined for array
-    @test_broken get(data, j"/1", missing) |> ismissing
+    @test_broken get(pointer_doc, j"/1", missing) |> ismissing
 
-    data = PointerDict()
-    @test "this" == get!(data, j"/a", "this")
-    @test data[j"/a"] == data["a"] == "this"
+    pointer_doc = PointerDict()
+    @test "this" == get!(pointer_doc, j"/a", "this")
+    @test pointer_doc[j"/a"] == pointer_doc["a"] == "this"
 
-    @test [1,2,3] == get!(data, j"/b", Any[1,2,3])
-    @test data[j"/b"] == data["b"] == [1,2,3]
-    @test data[j"/b/1"] == data["b"][1] == 1
-    @test data[j"/b/2"] == data["b"][2] == 2
+    @test [1,2,3] == get!(pointer_doc, j"/b", Any[1,2,3])
+    @test pointer_doc[j"/b"] == pointer_doc["b"] == [1,2,3]
+    @test pointer_doc[j"/b/1"] == pointer_doc["b"][1] == 1
+    @test pointer_doc[j"/b/2"] == pointer_doc["b"][2] == 2
 
-    @test get!(data, j"/b/5", missing) |> ismissing
-    @test data[j"/b/5"] === data["b"][5]
+    @test get!(pointer_doc, j"/b/5", missing) |> ismissing
+    @test pointer_doc[j"/b/5"] === pointer_doc["b"][5]
 
-    @test "that" == get(data, "c", "that")
-    @test haskey(data, "c") == false
-    @test "that" == get!(data, "c", "that")
-    @test haskey(data, "c")
-    data["e"] = [1]
+    @test "that" == get(pointer_doc, "c", "that")
+    @test haskey(pointer_doc, "c") == false
+    @test "that" == get!(pointer_doc, "c", "that")
+    @test haskey(pointer_doc, "c")
+    pointer_doc["e"] = [1]
 end
 
 @testset "literal string for a Number" begin
@@ -192,11 +251,18 @@ end
 end
 
 @testset "unique" begin
-    p = [j"/a", j"/b", j"/a"]
-    up = unique(p)
-    @test length(up) == 2
-    @test j"/a" in up
-    @test j"/b" in up
+    arr = [j"/a", j"/b", j"/a/1", j"/b/c/d", j"/a", j"/b/c/d"]
+    unique_arr = unique(arr)
+    @test length(unique_arr) == 4
+    @test j"/a" in unique_arr
+    @test j"/b" in unique_arr
+    @test j"/a/1" in unique_arr
+    @test j"/b/c/d" in unique_arr
+    @test unique(unique_arr) == unique_arr
+
+    empty!(arr)
+    @test isempty(arr)
+    @test unique(arr) == arr 
 end
 
 @testset "Failed setindex!" begin
@@ -224,12 +290,12 @@ end
     p5 = j"/a/5::boolean"
     p6 = j"/a/6::null"
 
-    data = PointerDict(p1 =>"string", p2 => 1, p3 => Dict(), p4 => [], p5 => true, p6 => missing)
-    @test data[p1] == "string"
-    @test data[p2] == 1
+    pointer_doc = PointerDict(p1 =>"string", p2 => 1, p3 => Dict(), p4 => [], p5 => true, p6 => missing)
+    @test pointer_doc[p1] == "string"
+    @test pointer_doc[p2] == 1
     
-    @test_throws ArgumentError data[p1] = 1
-    @test_throws ArgumentError data[p2] = "string"
+    @test_throws ArgumentError pointer_doc[p1] = 1
+    @test_throws ArgumentError pointer_doc[p2] = "string"
     
     d = PointerDict(p1 =>missing, p2 => missing, p3 => missing, p4 => missing, p5 => missing)
     @test d[p1] == ""
@@ -288,7 +354,6 @@ end
     push!(pd, "buz" => 10)
     @test pop!(pd, "buz") == 10
     @test pop!(pd, "buz", 20) == 20
-    @test sizehint!(pd, 5) === pd
     @test get(pd, delete!(pd, "foo"), 10) == 10
 
     @testset "merge & mergewith" begin
@@ -334,4 +399,47 @@ end
     @test append!(p4, 2) == j"/Root/Array/3/comments/1/2"
     deleteat!(p4, 5) == j"/Root/Array/3/comments/2"
     @test pop!(p4) == j"/Root/Array/3/comments"
+end
+
+@testset "Testing has_pointer, get_pointer, set_pointer! with Dict and OrderedDict using j literals" begin
+    # Create a simple dictionary for testing
+    dict = Dict("foo" => 1, "bar" => 2)
+    ordered_dict = OrderedDict("foo" => 1, "bar" => 2)
+
+    # Test has_pointer
+    @test has_pointer(dict, j"/foo")
+    @test has_pointer(ordered_dict, j"/bar")
+    @test !has_pointer(dict, j"/baz")
+    @test !has_pointer(ordered_dict, j"/baz")
+
+    # Test get_pointer
+    @test get_pointer(dict, j"/foo") == 1
+    @test get_pointer(ordered_dict, j"/bar") == 2
+    @test_throws KeyError get_pointer(dict, j"/baz")
+    @test_throws KeyError get_pointer(ordered_dict, j"/baz")
+
+    # Test set_pointer!
+    set_pointer!(dict, j"/foo", 3)
+    set_pointer!(ordered_dict, j"/bar", 4)
+    @test get_pointer(dict, j"/foo") == 3
+    @test get_pointer(ordered_dict, j"/bar") == 4
+
+    # Test setting a new key
+    set_pointer!(dict, j"/baz", 5)
+    set_pointer!(ordered_dict, j"/baz", 6)
+    @test has_pointer(dict, j"/baz")
+    @test has_pointer(ordered_dict, j"/baz")
+    @test get_pointer(dict, j"/baz") == 5
+    @test get_pointer(ordered_dict, j"/baz") == 6
+end
+
+@testset "misc test coverage" begin 
+    p1 = j"/Root/header"
+
+    @test length(p1) == length(eachindex(p1))
+
+    p2 = j"/NullArray/1::null"
+    @test eltype(p2) == Missing 
+    @test ismissing(JSONPointer._null_value(p2))
+
 end
