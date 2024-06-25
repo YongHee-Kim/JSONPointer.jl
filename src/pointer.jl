@@ -242,6 +242,12 @@ _convert_v(v::U, ::Pointer{U}) where {U} = v
 function _convert_v(v::V, p::Pointer{U}) where {U, V}
     v = ismissing(v) ? _null_value(p) : v
     try
+        #Conversion to OrderedDict is deprecated for unordered associative containers. Need to be sorted before the conversion
+        if eltype(p) <: OrderedDict
+            if <:(V, OrderedDict) == false
+                return convert(eltype(p), sort!(OrderedDict(v)))
+            end
+        end
         return convert(eltype(p), v)
     catch
         throw(ArgumentError(
