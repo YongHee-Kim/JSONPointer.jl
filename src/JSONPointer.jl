@@ -6,6 +6,6 @@ include("pointer.jl")
 include("pointerdict.jl")
 include("dict_interface.jl")
 
-export @j_str, PointerDict, has_pointer, get_pointer, set_pointer
+export @j_str, PointerDict, has_pointer, get_pointer, set_pointer!
 
 end # module

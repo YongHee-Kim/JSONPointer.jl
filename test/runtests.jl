@@ -139,8 +139,8 @@ end
     p2 = j"/cd/2/ef"
 
     doc = Dict()
-    set_pointer(doc, p1, 1)
-    set_pointer(doc, p2, 2)
+    set_pointer!(doc, p1, 1)
+    set_pointer!(doc, p2, 2)
     @test length(doc) == 2
 
     pointer_doc = PointerDict(p1 =>1, p2 => 2)
@@ -175,8 +175,8 @@ end
     @test pointer_doc[j"/1/a"] == 10
 
     p1 = j"/a/b/c/d/e/f/g/1/2/a/b/c"
-    doc = Dict()
-    set_pointer(doc, p1, "sooo deep")
+    doc = Dict{String, Any}()
+    set_pointer!(doc, p1, "sooo deep")
     @test get_pointer(doc, p1, missing) == "sooo deep"
     @test ismissing(get_pointer(doc, j"/nonexist", missing))
 
@@ -401,7 +401,7 @@ end
     @test pop!(p4) == j"/Root/Array/3/comments"
 end
 
-@testset "Testing has_pointer, get_pointer, set_pointer with Dict and OrderedDict using j literals" begin
+@testset "Testing has_pointer, get_pointer, set_pointer! with Dict and OrderedDict using j literals" begin
     # Create a simple dictionary for testing
     dict = Dict("foo" => 1, "bar" => 2)
     ordered_dict = OrderedDict("foo" => 1, "bar" => 2)
@@ -418,15 +418,15 @@ end
     @test_throws KeyError get_pointer(dict, j"/baz")
     @test_throws KeyError get_pointer(ordered_dict, j"/baz")
 
-    # Test set_pointer
-    set_pointer(dict, j"/foo", 3)
-    set_pointer(ordered_dict, j"/bar", 4)
+    # Test set_pointer!
+    set_pointer!(dict, j"/foo", 3)
+    set_pointer!(ordered_dict, j"/bar", 4)
     @test get_pointer(dict, j"/foo") == 3
     @test get_pointer(ordered_dict, j"/bar") == 4
 
     # Test setting a new key
-    set_pointer(dict, j"/baz", 5)
-    set_pointer(ordered_dict, j"/baz", 6)
+    set_pointer!(dict, j"/baz", 5)
+    set_pointer!(ordered_dict, j"/baz", 6)
     @test has_pointer(dict, j"/baz")
     @test has_pointer(ordered_dict, j"/baz")
     @test get_pointer(dict, j"/baz") == 5

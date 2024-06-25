@@ -162,7 +162,7 @@ Base.:(==)(a::Pointer{U}, b::Pointer{U}) where {U} = a.tokens == b.tokens
 
 _checked_get(collection::AbstractArray, token::Int) = collection[token]
 
-_checked_get(collection::AbstractDict, token::String) = collection[token]
+_checked_get(collection::AbstractDict, token::String) = get_pointer(collection, token)
 
 function _checked_get(collection, token)
     throw(ArgumentError(
@@ -290,7 +290,7 @@ function _setindex!(collection::AbstractDict, v, p::Pointer)
     prev = collection
     for (i, token) in enumerate(p.tokens)
         _add_element_if_needed(prev, token)
-        if i != length(p)
+        if i < length(p)
             if ismissing(prev[token])
                 prev[token] = _new_data(prev, p.tokens[i + 1])
             end
