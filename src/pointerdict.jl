@@ -43,83 +43,51 @@ dicttype(x::T) where T <: AbstractDict = eval(T.name.wrapper)
 Base.IteratorSize(@nospecialize T::Type{<:PointerDict}) = Base.IteratorSize(fieldtype(T, :d))
 Base.IteratorEltype(@nospecialize T::Type{<:PointerDict}) = Base.IteratorEltype(eltype(T))
 
-Base.length(pd::PointerDict) = length(getfield(pd, :d))
-function Base.sizehint!(pd::PointerDict, n::Integer)
-    sizehint!(getfield(pd, :d), n)
-    return pd
-end
-
 Base.keytype(@nospecialize T::Type{<:PointerDict{String}}) = String
 Base.keytype(@nospecialize T::Type{<:PointerDict{Symbol}}) = Symbol
 
-Base.pop!(pd::PointerDict, k) = pop!(getfield(pd, :d),  k)
-Base.pop!(pd::PointerDict, k, d) = pop!(getfield(pd, :d), k, d)
-
-function Base.empty!(pd::PointerDict)
-    empty!(getfield(pd, :d))
-    return pd
-end
-Base.isempty(pd::PointerDict) = isempty(getfield(pd, :d))
 function Base.empty(pd::PointerDict, ::Type{K}=keytype(pd), ::Type{V}=valtype(pd)) where {K,V}
     PointerDict(empty(getfield(pd, :d), K, V))
 end
 
-function Base.delete!(pd::PointerDict, k)
-    delete!(getfield(pd, :d), k)
+# Simply delegated dictionary functions to the wrapped PointerDdicct object
+# NOTE: push! is not included below, because the fallback version just
+#       calls setindex!
+@delegate_onefield(PointerDict, d, [ Base.getindex, Base.get, Base.get!, Base.haskey,
+Base.getkey, Base.pop!, Base.iterate,
+Base.isempty, Base.length, Base.delete!, Base.setindex!])
+# Base.copy(pd::PointerDict) = PointerDict(copy(getfield(pd, :d)))
+
+# empty! returns the wrapped dictionary if simply delegated 
+function Base.empty!(pd::PointerDict)
+    empty!(getfield(pd, :d))
     return pd
 end
 
-function Base.get(pd::PointerDict, k, d)
-    get(getfield(pd, :d), k, d)
-end
+
 function Base.get(pd::PointerDict, jk::Pointer, d)
     _get(getfield(pd, :d), jk, d)
-end
-function Base.get(f::Base.Callable, pd::PointerDict, k)
-    get(f, getfield(pd, :d), k)
 end
 function Base.get(f::Base.Callable, pd::PointerDict, jp::Pointer)
     _get(f, getfield(pd, :d), jp)
 end
 
-function Base.get!(pd::PointerDict, k, d)
-    get!(getfield(pd, :d), k, d)
-end
 function Base.get!(pd::PointerDict, jp::Pointer, d)
     _get!(getfield(pd, :d), jp, d)
-end
-function Base.get!(f::Base.Callable, pd::PointerDict, k)
-    get!(f, getfield(pd, :d), pd, k)
 end
 function Base.get!(f::Base.Callable, pd::PointerDict, jp::Pointer)
     _get!(f, getfield(pd, :d), jp)
 end
 
-function Base.getindex(pd::PointerDict, k)
-    getindex(getfield(pd, :d), k)
-end
 function Base.getindex(pd::PointerDict, jp::Pointer)
     _getindex(getfield(pd, :d), jp)
 end
-function Base.setindex!(pd::PointerDict, v, k)
-    setindex!(getfield(pd, :d), v, k)
-end
+
 function Base.setindex!(pd::PointerDict, v, jp::Pointer)
     _setindex!(getfield(pd, :d), v, jp)
 end
-
-Base.iterate(pd::PointerDict) = iterate(getfield(pd, :d))
-Base.iterate(pd::PointerDict, i) = iterate(getfield(pd, :d), i)
-
-Base.values(pd::PointerDict) = values(getfield(pd, :d))
-
-Base.haskey(pd::PointerDict, k) = haskey(getfield(pd, :d), k)
 Base.haskey(pd::PointerDict, jp::Pointer) = _haskey(getfield(pd, :d), jp)
-Base.getkey(pd::PointerDict, k, d) = getkey(getfield(pd, :d), k, d)
 Base.getkey(pd::PointerDict, jp::Pointer, d) = getkey(getfield(pd, :d), jp, d)
-Base.keys(pd::PointerDict) = keys(getfield(pd, :d))
-
-Base.copy(pd::PointerDict) = PointerDict(copy(getfield(pd, :d)))
 
 ## merge and mergewith
 Base.merge(pd::PointerDict) = copy(pd)
