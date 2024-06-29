@@ -2,6 +2,8 @@ using Test
 using JSONPointer
 using OrderedCollections
 
+import JSONPointer: ElementInsertionError, ElementRetrievalError 
+
 @testset "Basic Tests" begin
     pointer_doc = Dict(
         "foo" => ["bar", "baz"],
@@ -112,15 +114,13 @@ end
     @test_throws ArgumentError JSONPointer.Pointer("some/thing")
     pointer_doc = [0, 1, 2]
     @test_throws(
-        ArgumentError(
-            "JSON pointer does not match the data-structure. I tried (and " *
-            "failed) to index $(pointer_doc) with the key: a"
-        ),
+        ElementRetrievalError,
         pointer_doc[j"/a"],
     )
-    @test_throws KeyError get_pointer(Dict(), j"/a")
-    @test_throws BoundsError pointer_doc[j"/10"]
-    @test_throws BoundsError get_pointer(Dict("a"=> []), j"/a/1")
+    @test_throws ElementRetrievalError get_pointer(Dict(), j"/a")
+    @test_throws ElementRetrievalError pointer_doc[j"/10"]
+    @test_throws ElementRetrievalError get_pointer(Dict("a"=> []), j"/a/1")
+    @test_throws ElementRetrievalError get_pointer(Dict("a"=> (0,1)), j"/a/b")
 end
 
 @testset "JSONPointer Advanced" begin
@@ -203,9 +203,9 @@ end
     @test get(pointer_doc, j"/a/f", missing) |> ismissing
     @test get(pointer_doc, j"/a/b/c/d/e/f/g/5", 10000) == 10000
 
-    @test_throws KeyError pointer_doc[j"/a/f"]
-    @test_throws KeyError pointer_doc[j"/x"]
-    @test_throws BoundsError pointer_doc[j"/a/b/c/d/e/f/g/5"]
+    @test_throws ElementRetrievalError pointer_doc[j"/a/f"]
+    @test_throws ElementRetrievalError pointer_doc[j"/x"]
+    @test_throws ElementRetrievalError pointer_doc[j"/a/b/c/d/e/f/g/5"]
 
     pointer_doc = [[10, 20, 30, ["me"]]]
     @test pointer_doc[j"/1"] == [10, 20, 30, ["me"]]
@@ -267,7 +267,7 @@ end
 
 @testset "Failed setindex!" begin
     d = PointerDict("a" => [1])
-    @test_throws ArgumentError d[j"/a/b"] = 1
+    @test_throws ElementInsertionError d[j"/a/b"] = 1
 end
 
 @testset "grow object and array" begin
@@ -415,8 +415,8 @@ end
     # Test get_pointer
     @test get_pointer(dict, j"/foo") == 1
     @test get_pointer(ordered_dict, j"/bar") == 2
-    @test_throws KeyError get_pointer(dict, j"/baz")
-    @test_throws KeyError get_pointer(ordered_dict, j"/baz")
+    @test_throws ElementRetrievalError get_pointer(dict, j"/baz")
+    @test_throws ElementRetrievalError get_pointer(ordered_dict, j"/baz")
 
     # Test set_pointer!
     set_pointer!(dict, j"/foo", 3)

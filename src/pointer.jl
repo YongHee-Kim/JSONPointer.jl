@@ -133,6 +133,7 @@ function Base.show(io::IO, ::Pointer{Nothing})
     print(io, "JSONPointer{Nothing}(\"\")")
 end
 
+
 Base.getindex(A::AbstractArray, p::Pointer) = _getindex(A, p)
 Base.haskey(A::AbstractArray, p::Pointer) = _haskey(A, p)
 
@@ -161,14 +162,8 @@ Base.:(==)(a::Pointer{U}, b::Pointer{U}) where {U} = a.tokens == b.tokens
 # ==============================================================================
 
 _checked_get(collection::AbstractArray, token::Int) = collection[token]
+_checked_get(collection::Tuple, token::Int) = collection[token]
 _checked_get(collection::AbstractDict, token::String) = get_pointer(collection, token)
-
-function _checked_get(collection, token)
-    throw(ArgumentError(
-        "JSON pointer does not match the data-structure. I tried (and " *
-        "failed) to index $(collection) with the key: $(token)"
-    ))
-end
 
 # ==============================================================================
 
@@ -189,19 +184,18 @@ _haskey(collection::AbstractDict, token::String) = haskey(collection, token)
 function _haskey(collection::AbstractArray, token::Int)
     return 1 <= token <= length(collection)
 end
-
+function _haskey(collection::Tuple, token::Int)
+    return 1 <= token <= length(collection)
+end
 _haskey(::Any, ::Any) = false
 
 # ==============================================================================
-
 _getindex(collection, ::Pointer{Nothing}) = collection
-
 function _getindex(collection, p::Pointer)
-    return _getindex(collection, p.tokens)
-end
-
-function _getindex(collection, tokens::Vector{Union{String, Int}})
-    for token in tokens
+    for (i, token) in enumerate(p.tokens)
+        if !_haskey(collection, token)
+            throw(ElementRetrievalError(collection, p, i))
+        end
         collection = _checked_get(collection, token)
     end
     return collection
@@ -264,19 +258,10 @@ function _add_element_if_needed(prev::AbstractVector{T}, k::Int) where {T}
     return
 end
 
-function _add_element_if_needed(
-    prev::AbstractDict{K, V}, k::String
-) where {K, V}
+function _add_element_if_needed(prev::AbstractDict{K, V}, k::String) where {K, V}
     if !haskey(prev, k)
         prev[k] = _null_value(V)
     end
-end
-
-function _add_element_if_needed(collection, token)
-    throw(ArgumentError(
-        "JSON pointer does not match the data-structure. I tried (and " *
-        "failed) to set $(collection) at the index: $(token)"
-    ))
 end
 
 _new_data(::Any, n::Int) = Vector{Any}(missing, n)
@@ -288,6 +273,9 @@ end
 function _setindex!(collection::AbstractDict, v, p::Pointer)
     prev = collection
     for (i, token) in enumerate(p.tokens)
+        if !hasmethod(_add_element_if_needed, (typeof(prev), typeof(token)))
+            throw(ElementInsertionError(collection, p, i))
+        end    
         _add_element_if_needed(prev, token)
         if i < length(p)
             if ismissing(prev[token])
@@ -312,4 +300,52 @@ end
 function Base.pop!(p::Pointer)
     pop!(p.tokens)
     return p
+end
+
+# Exception Handling 
+struct ElementRetrievalError <: Exception
+    collection
+    pointer::Pointer
+    token_index
+end
+function Base.showerror(io::IO, err::ElementRetrievalError)   
+    error_msg = string("ElementRetrievalError:\"", mark_error_in_pointer(err.pointer, err.token_index), "\" from: ", err.collection, "\n └")
+
+    width_limit = displaysize()[2] * 3
+    if textwidth(error_msg) >= width_limit
+        print(io, error_msg[1:width_limit - 6], "...")
+    else 
+        print(io, error_msg)
+    end
+
+    token = err.pointer.tokens[err.token_index]
+    if isa(err.collection, AbstractDict)
+        showerror(io, KeyError(token))
+    elseif isa(err.collection, AbstractArray)
+        showerror(io, BoundsError(err.collection, token))
+    else 
+        showerror(io, MethodError(_getindex, (err.collection, token)))
+    end
+end
+
+struct ElementInsertionError <: Exception 
+    collection
+    pointer::Pointer
+    token_index
+end
+
+function Base.showerror(io::IO, err::ElementInsertionError)
+    error_msg = string("ElementInsertionError:\"", mark_error_in_pointer(err.pointer, err.token_index), "\" to: ", err.collection, "\n └")
+
+    print(io, error_msg)
+end
+
+function mark_error_in_pointer(p::Pointer, token_index::Int)
+    tokens = p.tokens
+    error_msg = join(tokens[1:token_index-1], "/")
+    error_msg *= string("/", "\033[1m\033[31m", tokens[token_index], "\033[0m")
+    if token_index < length(tokens)
+        error_msg *= "/" * join(tokens[token_index+1:end], "/")
+    end
+    return error_msg
 end
