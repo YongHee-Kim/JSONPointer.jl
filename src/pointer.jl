@@ -109,7 +109,7 @@ function Pointer(token_string::AbstractString; shift_index::Bool = false)
                 tokens[i] += 1
             end
             if iszero(tokens[i])
-                throw(BoundsError("Julia uses 1-based indexing, use '1' instead of '0'"))
+                throw(ArgumentError("Julia uses 1-based indexing, use '1' instead of '0' (or pass `shift_index = true` to convert from 0-based)"))
             end
         elseif occursin(r"^\\\d+$", token) # literal string for a number
             tokens[i] = String(chop(token; head = 1, tail = 0))

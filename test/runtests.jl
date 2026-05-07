@@ -310,9 +310,9 @@ end
     @test_throws DomainError JSONPointer.Pointer("/a::nothing")
     @test_throws DomainError JSONPointer.Pointer("/a/1::Int")
 
-    # error for 0 based indexing 
-    @test_throws BoundsError JSONPointer.Pointer("/0")
-    @test_throws BoundsError JSONPointer.Pointer("/a/0")
+    # error for 0 based indexing
+    @test_throws ArgumentError JSONPointer.Pointer("/0")
+    @test_throws ArgumentError JSONPointer.Pointer("/a/0")
     @test isa(JSONPointer.Pointer("/0"; shift_index = true), JSONPointer.Pointer)
 
 end
