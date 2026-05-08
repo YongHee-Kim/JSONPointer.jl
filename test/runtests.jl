@@ -2,6 +2,8 @@ using Test
 using JSONPointer
 using OrderedCollections
 
+import JSONPointer: ElementInsertionError, ElementRetrievalError 
+
 @testset "Basic Tests" begin
     pointer_doc = Dict(
         "foo" => ["bar", "baz"],
@@ -112,15 +114,13 @@ end
     @test_throws ArgumentError JSONPointer.Pointer("some/thing")
     pointer_doc = [0, 1, 2]
     @test_throws(
-        ArgumentError(
-            "JSON pointer does not match the data-structure. I tried (and " *
-            "failed) to index $(pointer_doc) with the key: a"
-        ),
+        ElementRetrievalError,
         pointer_doc[j"/a"],
     )
-    @test_throws KeyError get_pointer(Dict(), j"/a")
-    @test_throws BoundsError pointer_doc[j"/10"]
-    @test_throws BoundsError get_pointer(Dict("a"=> []), j"/a/1")
+    @test_throws ElementRetrievalError get_pointer(Dict(), j"/a")
+    @test_throws ElementRetrievalError pointer_doc[j"/10"]
+    @test_throws ElementRetrievalError get_pointer(Dict("a"=> []), j"/a/1")
+    @test_throws ElementRetrievalError get_pointer(Dict("a"=> (0,1)), j"/a/b")
 end
 
 @testset "JSONPointer Advanced" begin
@@ -163,7 +163,7 @@ end
     @test pointer_doc[p1] == "This"
     @test pointer_doc[p2] == "Is my Data"
 
-    # this is not supported 
+    # Constructing different Dict type with JSONPointer key is not supported.
     doc = Dict(p1 => "This", p2 => "Is my Data")
     @test_broken get_pointer(doc, p1)
 end
@@ -203,9 +203,9 @@ end
     @test get(pointer_doc, j"/a/f", missing) |> ismissing
     @test get(pointer_doc, j"/a/b/c/d/e/f/g/5", 10000) == 10000
 
-    @test_throws KeyError pointer_doc[j"/a/f"]
-    @test_throws KeyError pointer_doc[j"/x"]
-    @test_throws BoundsError pointer_doc[j"/a/b/c/d/e/f/g/5"]
+    @test_throws ElementRetrievalError pointer_doc[j"/a/f"]
+    @test_throws ElementRetrievalError pointer_doc[j"/x"]
+    @test_throws ElementRetrievalError pointer_doc[j"/a/b/c/d/e/f/g/5"]
 
     pointer_doc = [[10, 20, 30, ["me"]]]
     @test pointer_doc[j"/1"] == [10, 20, 30, ["me"]]
@@ -213,8 +213,9 @@ end
     @test pointer_doc[j"/1/4"] == ["me"]
     @test pointer_doc[j"/1/4/1"] == "me"
 
-    # get isn't defined for array
-    @test_broken get(pointer_doc, j"/1", missing) |> ismissing
+    @test get(pointer_doc, j"/1", missing) == [10, 20, 30, ["me"]]
+    @test get(pointer_doc, j"/5", missing) |> ismissing
+    @test get(() -> "fallback", pointer_doc, j"/5") == "fallback"
 
     pointer_doc = PointerDict()
     @test "this" == get!(pointer_doc, j"/a", "this")
@@ -267,7 +268,7 @@ end
 
 @testset "Failed setindex!" begin
     d = PointerDict("a" => [1])
-    @test_throws ArgumentError d[j"/a/b"] = 1
+    @test_throws ElementInsertionError d[j"/a/b"] = 1
 end
 
 @testset "grow object and array" begin
@@ -310,9 +311,9 @@ end
     @test_throws DomainError JSONPointer.Pointer("/a::nothing")
     @test_throws DomainError JSONPointer.Pointer("/a/1::Int")
 
-    # error for 0 based indexing 
-    @test_throws BoundsError JSONPointer.Pointer("/0")
-    @test_throws BoundsError JSONPointer.Pointer("/a/0")
+    # error for 0 based indexing
+    @test_throws ArgumentError JSONPointer.Pointer("/0")
+    @test_throws ArgumentError JSONPointer.Pointer("/a/0")
     @test isa(JSONPointer.Pointer("/0"; shift_index = true), JSONPointer.Pointer)
 
 end
@@ -415,8 +416,8 @@ end
     # Test get_pointer
     @test get_pointer(dict, j"/foo") == 1
     @test get_pointer(ordered_dict, j"/bar") == 2
-    @test_throws KeyError get_pointer(dict, j"/baz")
-    @test_throws KeyError get_pointer(ordered_dict, j"/baz")
+    @test_throws ElementRetrievalError get_pointer(dict, j"/baz")
+    @test_throws ElementRetrievalError get_pointer(ordered_dict, j"/baz")
 
     # Test set_pointer!
     set_pointer!(dict, j"/foo", 3)
@@ -433,7 +434,71 @@ end
     @test get_pointer(ordered_dict, j"/baz") == 6
 end
 
-@testset "misc test coverage" begin 
+@testset "keytype" begin
+    pd_str = PointerDict("a" => 1, "b" => 2)
+    @test keytype(pd_str) == String
+    @test keytype(typeof(pd_str)) == String
+
+    pd_sym = PointerDict(Dict(:a => 1, :b => 2))
+    @test keytype(pd_sym) == Symbol
+    @test keytype(typeof(pd_sym)) == Symbol
+end
+
+@testset "IteratorSize / IteratorEltype on type" begin
+    pd = PointerDict("a" => 1)
+    @test Base.IteratorSize(typeof(pd)) == Base.HasLength()
+    @test Base.IteratorEltype(typeof(pd)) == Base.HasEltype()
+end
+
+@testset "get / get! Pointer overloads" begin
+    pd = PointerDict("a" => 1, "b" => 2)
+
+    @test get(pd, j"/a", 99) == 1
+    @test get(pd, j"/missing", 99) == 99
+
+    pd2 = PointerDict("a" => 1)
+    @test get!(pd2, j"/new", 42) == 42
+    @test pd2[j"/new"] == 42
+    @test get!(pd2, j"/a", 999) == 1
+
+    @test get(() -> 99, PointerDict("a" => 1), j"/a") == 1
+    @test get(() -> 99, PointerDict("a" => 1), j"/missing") == 99
+
+    pd3 = PointerDict("a" => 1)
+    @test get!(() -> 42, pd3, j"/new") == 42
+    @test pd3[j"/new"] == 42
+    counter = Ref(0)
+    @test get!(() -> (counter[] += 1; 999), pd3, j"/a") == 1
+    @test counter[] == 0
+end
+
+@testset "merge promotion and edge cases" begin
+    a = PointerDict("a" => 1, "b" => 2)
+    b = PointerDict("b" => 20, "c" => 30)
+
+    m1 = merge(a)
+    @test m1 == a
+    @test m1 !== a
+    m1["a"] = 999
+    @test a["a"] == 1
+
+    @test merge(a, PointerDict()) == a
+
+    a_int = PointerDict(Dict{String,Int}("a" => 1))
+    b_flt = PointerDict(Dict{String,Float64}("b" => 2.5))
+    @test valtype(merge(a_int, b_flt)) == Float64
+
+    a_int2 = PointerDict(Dict{String,Int}("a" => 1))
+    b_str = PointerDict(Dict{String,String}("b" => "hi"))
+    @test valtype(merge(a_int2, b_str)) == Any
+
+    @test keytype(merge(a, b)) == String
+    sa = PointerDict(Dict(:a => 1))
+    sb = PointerDict(Dict(:b => 2))
+    @test keytype(merge(sa, sb)) == Symbol
+end
+
+@testset "misc test coverage" begin
     p1 = j"/Root/header"
 
     @test length(p1) == length(eachindex(p1))
