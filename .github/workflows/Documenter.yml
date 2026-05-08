@@ -1,0 +1,43 @@
+name: Coverage
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+    tags: '*'
+  pull_request:
+
+jobs:
+  check_ongoingjob:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Cancel ongoing coverage builds for previous commits
+      uses: styfle/cancel-workflow-action@0.13.1
+      with:
+        access_token: ${{ github.token }}
+
+  report_testcoverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1.10'
+      - uses: julia-actions/cache@v3
+      - uses: julia-actions/julia-buildpkg@v1
+      - uses: julia-actions/julia-runtest@v1
+      - uses: julia-actions/julia-processcoverage@v1
+      - name: Setup .NET Core # Required to execute ReportGenerator
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: ReportGenerator
+        uses: danielpalme/ReportGenerator-GitHub-Action@5.5.6
+        with:
+            reports: 'lcov.info' # REQUIRED # The coverage reports that should be parsed (separated by semicolon). Globbing is supported.
+            targetdir: 'coverage' # REQUIRED # The directory where the generated report should be saved.
+            reporttypes: 'HtmlInline;Badges;TextSummary' # The output formats and scope (separated by semicolon)
+            verbosity: 'Info' # The verbosity level of the log messages. Values: Verbose, Info, Warning, Error, Off
+            tag: '${{ github.run_number }}_${{ github.run_id }}' # Optional tag or build version.

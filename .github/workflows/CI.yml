@@ -1,9 +1,10 @@
-name: Run CI
+name: Run tests
 
 on:
   pull_request:
     branches:
       - master
+      - develop
   push:
     branches:
       - master
@@ -16,23 +17,21 @@ jobs:
     strategy:
       matrix:
         version:
-          - '1.3'
+          - '1.10'
           - '1' # automatically expands to the latest stable 1.x release of Julia
           - 'nightly'
         os:
           - ubuntu-latest
+          - windows-latest
         arch:
           - x64
-        include:
-          - os: windows-latest
-            version: '1'
-            arch: x86
+
     steps:
-      - uses: actions/checkout@v2
-      - uses: julia-actions/setup-julia@v1
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v3
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
-      - uses: julia-actions/cache@v1
+      - uses: julia-actions/cache@v3
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
