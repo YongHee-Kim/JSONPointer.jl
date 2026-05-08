@@ -163,7 +163,7 @@ end
     @test pointer_doc[p1] == "This"
     @test pointer_doc[p2] == "Is my Data"
 
-    # this is not supported 
+    # Constructing different Dict type with JSONPointer key is not supported.
     doc = Dict(p1 => "This", p2 => "Is my Data")
     @test_broken get_pointer(doc, p1)
 end
@@ -213,8 +213,9 @@ end
     @test pointer_doc[j"/1/4"] == ["me"]
     @test pointer_doc[j"/1/4/1"] == "me"
 
-    # get isn't defined for array
-    @test_broken get(pointer_doc, j"/1", missing) |> ismissing
+    @test get(pointer_doc, j"/1", missing) == [10, 20, 30, ["me"]]
+    @test get(pointer_doc, j"/5", missing) |> ismissing
+    @test get(() -> "fallback", pointer_doc, j"/5") == "fallback"
 
     pointer_doc = PointerDict()
     @test "this" == get!(pointer_doc, j"/a", "this")
@@ -460,10 +461,15 @@ end
     @test pd2[j"/new"] == 42
     @test get!(pd2, j"/a", 999) == 1
 
-    # Callable forms dispatch to _get(f, dict, p) / _get!(f, dict, p),
-    # which are not currently defined in pointer.jl — track as broken.
-    @test_broken get(() -> 99, PointerDict("a" => 1), j"/a") == 1
-    @test_broken get!(() -> 42, PointerDict("a" => 1), j"/new") == 42
+    @test get(() -> 99, PointerDict("a" => 1), j"/a") == 1
+    @test get(() -> 99, PointerDict("a" => 1), j"/missing") == 99
+
+    pd3 = PointerDict("a" => 1)
+    @test get!(() -> 42, pd3, j"/new") == 42
+    @test pd3[j"/new"] == 42
+    counter = Ref(0)
+    @test get!(() -> (counter[] += 1; 999), pd3, j"/a") == 1
+    @test counter[] == 0
 end
 
 @testset "merge promotion and edge cases" begin

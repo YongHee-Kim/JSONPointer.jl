@@ -136,6 +136,8 @@ end
 
 Base.getindex(A::AbstractArray, p::Pointer) = _getindex(A, p)
 Base.haskey(A::AbstractArray, p::Pointer) = _haskey(A, p)
+Base.get(A::AbstractArray, p::Pointer, default) = _get(A, p, default)
+Base.get(f::Base.Callable, A::AbstractArray, p::Pointer) = _get(f, A, p)
 
 function Base.unique(arr::AbstractArray{<:Pointer, N}) where {N}
     out = deepcopy(arr)
@@ -159,6 +161,17 @@ end
 
 Base.:(==)(a::Pointer{U}, b::Pointer{U}) where {U} = a.tokens == b.tokens
 
+function _get(f::Base.Callable, collection, p::Pointer)
+    _haskey(collection, p) ? _getindex(collection, p) : f()
+end
+function _get!(f::Base.Callable, collection, p::Pointer)
+    if _haskey(collection, p)
+        return _getindex(collection, p)
+    end
+    v = f()
+    _setindex!(collection, v, p)
+    return v
+end
 # ==============================================================================
 
 _checked_get(collection::AbstractArray, token::Int) = collection[token]
