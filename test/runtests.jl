@@ -433,7 +433,66 @@ end
     @test get_pointer(ordered_dict, j"/baz") == 6
 end
 
-@testset "misc test coverage" begin 
+@testset "keytype" begin
+    pd_str = PointerDict("a" => 1, "b" => 2)
+    @test keytype(pd_str) == String
+    @test keytype(typeof(pd_str)) == String
+
+    pd_sym = PointerDict(Dict(:a => 1, :b => 2))
+    @test keytype(pd_sym) == Symbol
+    @test keytype(typeof(pd_sym)) == Symbol
+end
+
+@testset "IteratorSize / IteratorEltype on type" begin
+    pd = PointerDict("a" => 1)
+    @test Base.IteratorSize(typeof(pd)) == Base.HasLength()
+    @test Base.IteratorEltype(typeof(pd)) == Base.HasEltype()
+end
+
+@testset "get / get! Pointer overloads" begin
+    pd = PointerDict("a" => 1, "b" => 2)
+
+    @test get(pd, j"/a", 99) == 1
+    @test get(pd, j"/missing", 99) == 99
+
+    pd2 = PointerDict("a" => 1)
+    @test get!(pd2, j"/new", 42) == 42
+    @test pd2[j"/new"] == 42
+    @test get!(pd2, j"/a", 999) == 1
+
+    # Callable forms dispatch to _get(f, dict, p) / _get!(f, dict, p),
+    # which are not currently defined in pointer.jl — track as broken.
+    @test_broken get(() -> 99, PointerDict("a" => 1), j"/a") == 1
+    @test_broken get!(() -> 42, PointerDict("a" => 1), j"/new") == 42
+end
+
+@testset "merge promotion and edge cases" begin
+    a = PointerDict("a" => 1, "b" => 2)
+    b = PointerDict("b" => 20, "c" => 30)
+
+    m1 = merge(a)
+    @test m1 == a
+    @test m1 !== a
+    m1["a"] = 999
+    @test a["a"] == 1
+
+    @test merge(a, PointerDict()) == a
+
+    a_int = PointerDict(Dict{String,Int}("a" => 1))
+    b_flt = PointerDict(Dict{String,Float64}("b" => 2.5))
+    @test valtype(merge(a_int, b_flt)) == Float64
+
+    a_int2 = PointerDict(Dict{String,Int}("a" => 1))
+    b_str = PointerDict(Dict{String,String}("b" => "hi"))
+    @test valtype(merge(a_int2, b_str)) == Any
+
+    @test keytype(merge(a, b)) == String
+    sa = PointerDict(Dict(:a => 1))
+    sb = PointerDict(Dict(:b => 2))
+    @test keytype(merge(sa, sb)) == Symbol
+end
+
+@testset "misc test coverage" begin
     p1 = j"/Root/header"
 
     @test length(p1) == length(eachindex(p1))
