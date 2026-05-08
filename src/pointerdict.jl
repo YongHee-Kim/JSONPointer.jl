@@ -50,12 +50,13 @@ function Base.empty(pd::PointerDict, ::Type{K}=keytype(pd), ::Type{V}=valtype(pd
     PointerDict(empty(getfield(pd, :d), K, V))
 end
 
-# Simply delegated dictionary functions to the wrapped PointerDdicct object
-# NOTE: push! is not included below, because the fallback version just
-#       calls setindex!
-@delegate_onefield(PointerDict, d, [ Base.getindex, Base.get, Base.get!, Base.haskey,
-Base.getkey, Base.pop!, Base.iterate,
-Base.isempty, Base.length, Base.delete!, Base.setindex!])
+# AbstractDict interface primitives plus a few methods (pop!, getkey) that
+# Base does NOT provide a generic AbstractDict fallback for. Other methods
+# (isempty, keys, values, pairs, push!, ==, copy, ...) come from Base's
+# AbstractDict fallbacks built on top of these.
+@delegate_onefield(PointerDict, d, [Base.iterate, Base.length,
+    Base.getindex, Base.setindex!, Base.get, Base.get!, Base.haskey,
+    Base.delete!, Base.pop!, Base.getkey])
 # Base.copy(pd::PointerDict) = PointerDict(copy(getfield(pd, :d)))
 
 # empty! returns the wrapped dictionary if simply delegated 
